@@ -1,8 +1,9 @@
 import asyncio
-import httpx
-import aiosqlite
-import os
 import logging
+import os
+
+import aiosqlite
+import httpx
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -12,7 +13,7 @@ ROOT_CATEGORIES = [
     "520-muzhchiny",
     "583-zhenshinam",
     "650-detyam",
-    "697-aksessuary"
+    "697-aksessuary",
 ]
 
 DB_PATH = "products.db"
@@ -27,8 +28,9 @@ HEADERS = {
     "Accept": "application/json, text/plain, */*",
     "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
     "Referer": "https://decathlon.kz/",
-    "X-Requested-With": "XMLHttpRequest"
+    "X-Requested-With": "XMLHttpRequest",
 }
+
 
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
@@ -43,10 +45,13 @@ async def init_db():
         """)
         await db.commit()
 
-async def fetch_category(client, slug, semaphore, db, parent_id=None, level=0, seen=None):
+
+async def fetch_category(
+    client, slug, semaphore, db, parent_id=None, level=0, seen=None
+):
     if seen is None:
         seen = set()
-    
+
     if slug in seen:
         return
     seen.add(slug)
@@ -77,12 +82,12 @@ async def fetch_category(client, slug, semaphore, db, parent_id=None, level=0, s
 
     cat_id = cat_data.get("id")
     name = cat_data.get("name")
-    
+
     # Save to DB
     try:
         await db.execute(
             "INSERT OR REPLACE INTO categories (id, name, slug, parent_id, level) VALUES (?, ?, ?, ?, ?)",
-            (cat_id, name, slug, parent_id, level)
+            (cat_id, name, slug, parent_id, level),
         )
         await db.commit()
     except Exception as e:
@@ -91,30 +96,41 @@ async def fetch_category(client, slug, semaphore, db, parent_id=None, level=0, s
     # Recurse
     child_categories = cat_data.get("child_categories", [])
     if child_categories:
-        logger.info(f"Category {slug} has {len(child_categories)} children. Starting recursion...")
-    
+        logger.info(
+            f"Category {slug} has {len(child_categories)} children. Starting recursion..."
+        )
+
     tasks = []
     for child in child_categories:
         child_slug = child.get("link_rewrite")
         if child_slug:
-            tasks.append(fetch_category(client, child_slug, semaphore, db, cat_id, level + 1, seen))
-    
+            tasks.append(
+                fetch_category(
+                    client, child_slug, semaphore, db, cat_id, level + 1, seen
+                )
+            )
+
     if tasks:
         await asyncio.gather(*tasks)
+
 
 async def main():
     await init_db()
     parallelism = int(os.getenv("PARALLELISM", DEFAULT_PARALLELISM))
     semaphore = asyncio.Semaphore(parallelism)
-    
+
     seen = set()
     async with httpx.AsyncClient(follow_redirects=True) as client:
         async with aiosqlite.connect(DB_PATH) as db:
             logger.info(f"Starting category scraping with parallelism={parallelism}...")
-            tasks = [fetch_category(client, slug, semaphore, db, seen=seen) for slug in ROOT_CATEGORIES]
+            tasks = [
+                fetch_category(client, slug, semaphore, db, seen=seen)
+                for slug in ROOT_CATEGORIES
+            ]
             await asyncio.gather(*tasks)
-    
+
     logger.info("Category scraping finished.")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

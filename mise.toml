@@ -1,6 +1,17 @@
 [tools]
 uv = "latest"
 
+[tasks.lint]
+description = "Lint & format-check the codebase"
+run = [
+  "uvx ruff check decathlon",
+  "uvx ruff format --check decathlon",
+]
+
+[tasks.format]
+description = "Auto-format the codebase"
+run = "uvx ruff format decathlon"
+
 [tasks."fetch-categories"]
 run = "uv run python -m decathlon.scrapers.categories"
 env = { PARALLELISM = "1" }

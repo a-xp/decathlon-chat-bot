@@ -27,8 +27,8 @@ from decathlon.app.agent import (  # noqa: E402 - must follow load_dotenv()
     OPENAI_MODEL,
     run_agent,
 )
-from decathlon.app.catalog import PRODUCT_URL
-from decathlon.app.productdb import get_cards_by_ids
+from decathlon.app.catalog import PRODUCT_URL  # noqa: E402 - must follow load_dotenv()
+from decathlon.app.productdb import get_cards_by_ids  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -96,9 +96,9 @@ async def healthz():
 
 def cited_products(reply: str) -> list[dict]:
     """Build product cards for [product:ID] citations in the reply."""
-    ids = list(dict.fromkeys(
-        m.group(1) for m in re.finditer(r"\[product:([^\]]+)\]", reply)
-    ))
+    ids = list(
+        dict.fromkeys(m.group(1) for m in re.finditer(r"\[product:([^\]]+)\]", reply))
+    )
     return [
         {
             "title": p["title"],

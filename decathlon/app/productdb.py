@@ -74,10 +74,16 @@ def get_cards_by_ids(ids: list[str]) -> list[dict]:
         r = by_id.get(str(pid))
         if r:
             _, h, t, b, p, a, img = r
-            result.append({
-                "handle": h, "title": t, "brand": b, "price": p,
-                "available": bool(a) if a is not None else None, "image_url": img,
-            })
+            result.append(
+                {
+                    "handle": h,
+                    "title": t,
+                    "brand": b,
+                    "price": p,
+                    "available": bool(a) if a is not None else None,
+                    "image_url": img,
+                }
+            )
     return result
 
 
@@ -100,7 +106,14 @@ def get_cards_by_handles(handles: list[str]) -> list[dict]:
         logger.warning("products.db read failed for handles %s: %s", handles, e)
         return []
     return [
-        {"handle": h, "title": t, "brand": b, "price": p, "available": bool(a) if a is not None else None, "image_url": img}
+        {
+            "handle": h,
+            "title": t,
+            "brand": b,
+            "price": p,
+            "available": bool(a) if a is not None else None,
+            "image_url": img,
+        }
         for h, t, b, p, a, img in rows
     ]
 
@@ -129,8 +142,19 @@ def get_product_details(product_id: str) -> dict | None:
     if row is None:
         return None
 
-    (pid, handle, title, description, brand, model_code,
-     price, compare_at_price, available, image_url, raw_json) = row
+    (
+        pid,
+        handle,
+        title,
+        description,
+        brand,
+        model_code,
+        price,
+        compare_at_price,
+        available,
+        image_url,
+        raw_json,
+    ) = row
 
     try:
         raw = json.loads(raw_json) if raw_json else {}

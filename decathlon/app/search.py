@@ -77,7 +77,12 @@ def search_products(
     color_lc = color.strip().lower() if color and color.strip() else None
 
     # Over-fetch when post-filtering client-side (category, brand, size, color).
-    post_filtered = bool(ancestor_ids) or brand_lc is not None or size_lc is not None or color_lc is not None
+    post_filtered = (
+        bool(ancestor_ids)
+        or brand_lc is not None
+        or size_lc is not None
+        or color_lc is not None
+    )
     n_results = n * 5 if post_filtered else n
 
     client = get_client()
@@ -97,14 +102,20 @@ def search_products(
     if where is not None and len(res["ids"][0]) < n:
         logger.info(
             "Gender filter %r left %d (<%d) results; relaxing",
-            gender, len(res["ids"][0]), n,
+            gender,
+            len(res["ids"][0]),
+            n,
         )
         res = run(None)
 
-    rows = list(zip(  # already distance-sorted
-        res["ids"][0], res["documents"][0],
-        res["metadatas"][0], res["distances"][0],
-    ))
+    rows = list(
+        zip(  # already distance-sorted
+            res["ids"][0],
+            res["documents"][0],
+            res["metadatas"][0],
+            res["distances"][0],
+        )
+    )
 
     def to_product(rid, doc, meta, dist) -> dict:
         title, section_path = parse_document(doc)
@@ -121,13 +132,9 @@ def search_products(
         }
 
     def matches(meta) -> bool:
-        if ancestor_ids and not any(
-            ancestor_match(meta, aid) for aid in ancestor_ids
-        ):
+        if ancestor_ids and not any(ancestor_match(meta, aid) for aid in ancestor_ids):
             return False
-        if brand_lc is not None and brand_lc not in (
-            (meta.get("brand") or "").lower()
-        ):
+        if brand_lc is not None and brand_lc not in ((meta.get("brand") or "").lower()):
             return False
         if size_lc is not None:
             stored = (meta.get("sizes") or "").lower()
@@ -148,8 +155,9 @@ def search_products(
     # if it leaves too few, fall back to the raw semantic ranking.
     if len(filtered) < n:
         logger.info(
-            "Category/brand filter left %d (<%d) results; relaxing to "
-            "semantic ranking", len(filtered), n,
+            "Category/brand filter left %d (<%d) results; relaxing to semantic ranking",
+            len(filtered),
+            n,
         )
         return [to_product(*r) for r in rows[:n]]
     return [to_product(*r) for r in filtered[:n]]
@@ -195,7 +203,11 @@ def get_facets(
     rows = list(zip(res["metadatas"][0], res["distances"][0]))
     rows = [(m, d) for m, d in rows if d <= FACET_DISTANCE_THRESHOLD]
     if ancestor_ids:
-        rows = [(m, d) for m, d in rows if any(ancestor_match(m, aid) for aid in ancestor_ids)]
+        rows = [
+            (m, d)
+            for m, d in rows
+            if any(ancestor_match(m, aid) for aid in ancestor_ids)
+        ]
 
     color_counts: Counter = Counter()
     brand_counts: Counter = Counter()
@@ -229,13 +241,21 @@ def get_facets(
 
     result: dict = {"total": len(rows)}
     if type_counts:
-        result["types"] = [{"value": v, "count": c} for v, c in type_counts.most_common(15)]
+        result["types"] = [
+            {"value": v, "count": c} for v, c in type_counts.most_common(15)
+        ]
     if color_counts:
-        result["colors"] = [{"value": v, "count": c} for v, c in color_counts.most_common(15)]
+        result["colors"] = [
+            {"value": v, "count": c} for v, c in color_counts.most_common(15)
+        ]
     if brand_counts:
-        result["brands"] = [{"value": v, "count": c} for v, c in brand_counts.most_common(10)]
+        result["brands"] = [
+            {"value": v, "count": c} for v, c in brand_counts.most_common(10)
+        ]
     if size_counts:
-        result["sizes"] = [{"value": v, "count": c} for v, c in size_counts.most_common(20)]
+        result["sizes"] = [
+            {"value": v, "count": c} for v, c in size_counts.most_common(20)
+        ]
     if prices:
         result["price_range"] = {"min": round(min(prices)), "max": round(max(prices))}
     return result

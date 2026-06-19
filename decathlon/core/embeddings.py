@@ -15,9 +15,7 @@ logger = logging.getLogger(__name__)
 # Load a local .env if present (real env vars take precedence).
 load_dotenv()
 
-OPENAI_BASE_URL = os.getenv(
-    "OPENAI_BASE_URL", "http://localhost:1234/v1"
-).rstrip("/")
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "http://localhost:1234/v1").rstrip("/")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "lm-studio")
 OPENAI_EMBED_MODEL = os.getenv("OPENAI_EMBED_MODEL", "bge-m3")
 EMBED_BATCH = int(os.getenv("EMBED_BATCH", "64"))
@@ -34,7 +32,7 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
 
     with httpx.Client(timeout=REQUEST_TIMEOUT) as client:
         for start in range(0, len(texts), EMBED_BATCH):
-            batch = texts[start:start + EMBED_BATCH]
+            batch = texts[start : start + EMBED_BATCH]
             resp = client.post(
                 f"{OPENAI_BASE_URL}/embeddings",
                 json={"model": OPENAI_EMBED_MODEL, "input": batch},
@@ -46,8 +44,7 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
             data.sort(key=lambda d: d.get("index", 0))
             if len(data) != len(batch):
                 raise RuntimeError(
-                    f"Embedding count mismatch: asked {len(batch)}, "
-                    f"got {len(data)}"
+                    f"Embedding count mismatch: asked {len(batch)}, got {len(data)}"
                 )
             vectors.extend(d["embedding"] for d in data)
 

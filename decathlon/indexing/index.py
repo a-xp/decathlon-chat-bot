@@ -117,9 +117,7 @@ def _flush(collection, ids, docs, metas) -> None:
     if not ids:
         return
     embeddings = embed_texts(docs)
-    collection.upsert(
-        ids=ids, documents=docs, embeddings=embeddings, metadatas=metas
-    )
+    collection.upsert(ids=ids, documents=docs, embeddings=embeddings, metadatas=metas)
     logger.info("Upserted batch of %d into '%s'", len(ids), collection.name)
 
 
@@ -157,8 +155,18 @@ def index_products(conn, cats, by_legacy, collection) -> None:
         "SELECT id, title, category_id, tags, brand, price, available, "
         "handle, image_url, raw_json FROM products"
     )
-    for (pid, title, cat_id, tags_json, brand, price, available,
-         handle, image_url, raw_json_str) in rows:
+    for (
+        pid,
+        title,
+        cat_id,
+        tags_json,
+        brand,
+        price,
+        available,
+        handle,
+        image_url,
+        raw_json_str,
+    ) in rows:
         try:
             tags = json.loads(tags_json) if tags_json else []
         except (TypeError, ValueError):
@@ -249,13 +257,13 @@ def main() -> None:
         by_legacy = legacy_index(cats)
         logger.info(
             "Loaded %d categories (%d legacy-mapped) from %s",
-            len(cats), len(by_legacy), DB_PATH,
+            len(cats),
+            len(by_legacy),
+            DB_PATH,
         )
         client = get_client()
         index_categories(conn, cats, get_collection(client, CATEGORIES))
-        index_products(
-            conn, cats, by_legacy, get_collection(client, PRODUCTS)
-        )
+        index_products(conn, cats, by_legacy, get_collection(client, PRODUCTS))
     finally:
         conn.close()
     logger.info("Vector indexing finished.")

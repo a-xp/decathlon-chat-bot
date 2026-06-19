@@ -39,7 +39,8 @@ def main() -> None:
     parser.add_argument("--sport", type=int, help="sport_id filter")
     parser.add_argument("--gender", type=int, help="gender_id filter")
     parser.add_argument(
-        "--ancestor", type=int,
+        "--ancestor",
+        type=int,
         help="keep only results whose section path contains this category id",
     )
     parser.add_argument("-n", type=int, default=10, help="number of results")

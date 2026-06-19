@@ -18,7 +18,7 @@ can recover or apologise) rather than crashing the request.
 import json
 import logging
 import os
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 
 import httpx
 from dotenv import load_dotenv
@@ -36,9 +36,7 @@ logger = logging.getLogger(__name__)
 # app.py imports this before its own load_dotenv(); load here too.
 load_dotenv()
 
-OPENAI_BASE_URL = os.getenv(
-    "OPENAI_BASE_URL", "http://localhost:1234/v1"
-).rstrip("/")
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "http://localhost:1234/v1").rstrip("/")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "lm-studio")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "google/gemma-4-31b")
 REQUEST_TIMEOUT = float(os.getenv("OPENAI_TIMEOUT", "120"))
@@ -51,87 +49,110 @@ FIND_CATEGORIES_N = 15
 
 # --- Tool parameter models ---------------------------------------------------
 
+
 class FindCategoriesArgs(BaseModel):
     query: Annotated[
         str,
-        Field(description=(
-            "A category keyword or concept in the user's language, "
-            "e.g. 'кроссовки для бега', 'палатки', 'детская обувь'."
-        )),
+        Field(
+            description=(
+                "A category keyword or concept in the user's language, "
+                "e.g. 'кроссовки для бега', 'палатки', 'детская обувь'."
+            )
+        ),
     ]
 
 
 class SearchProductsArgs(BaseModel):
     query: Annotated[
         str,
-        Field(description=(
-            "The product description in the user's language — the thing being "
-            "shopped for and its defining attributes (type, sport, material, "
-            "season). Normalize informal or diminutive Russian forms to "
-            "standard catalog terms (e.g. 'штанишки'/'штаны' → 'брюки', "
-            "'шортики' → 'шорты', 'маечка' → 'майка/футболка'). Never translate "
-            "product nouns to another language. Do NOT put colour, audience, "
-            "gender, or age here — use the dedicated fields instead."
-        )),
+        Field(
+            description=(
+                "The product description in the user's language — the thing being "
+                "shopped for and its defining attributes (type, sport, material, "
+                "season). Normalize informal or diminutive Russian forms to "
+                "standard catalog terms (e.g. 'штанишки'/'штаны' → 'брюки', "
+                "'шортики' → 'шорты', 'маечка' → 'майка/футболка'). Never translate "
+                "product nouns to another language. Do NOT put colour, audience, "
+                "gender, or age here — use the dedicated fields instead."
+            )
+        ),
     ]
     gender: Annotated[
-        Optional[Literal[tuple(search_mod.GENDERS)]],  # type: ignore[valid-type]
-        Field(None, description=(
-            "Who the product is for, if stated or clearly implied "
-            "('для девочки'->girls, 'мужские'->men, 'детские'->kids). "
-            "Omit if unspecified or irrelevant (a tent, a ball)."
-        )),
+        Literal[tuple(search_mod.GENDERS)] | None,  # type: ignore[valid-type]
+        Field(
+            None,
+            description=(
+                "Who the product is for, if stated or clearly implied "
+                "('для девочки'->girls, 'мужские'->men, 'детские'->kids). "
+                "Omit if unspecified or irrelevant (a tent, a ball)."
+            ),
+        ),
     ] = None
     categories: Annotated[
-        Optional[list[str]],
-        Field(None, description=(
-            "Full category path strings exactly as returned by find_categories, "
-            "to restrict the search. A product matching ANY of them is kept."
-        )),
+        list[str] | None,
+        Field(
+            None,
+            description=(
+                "Full category path strings exactly as returned by find_categories, "
+                "to restrict the search. A product matching ANY of them is kept."
+            ),
+        ),
     ] = None
     brand: Annotated[
-        Optional[str],
-        Field(None, description=(
-            "Brand to filter by, e.g. 'Quechua', 'Kipsta'. "
-            "Matched case-insensitively."
-        )),
+        str | None,
+        Field(
+            None,
+            description=(
+                "Brand to filter by, e.g. 'Quechua', 'Kipsta'. "
+                "Matched case-insensitively."
+            ),
+        ),
     ] = None
     size: Annotated[
-        Optional[str],
-        Field(None, description=(
-            "Size to filter by, as the user stated it (e.g. 'M', 'XL', "
-            "'EU42', '42'). Only products that have a variant of approximately "
-            "this size are returned. Omit when the user has not mentioned a size."
-        )),
+        str | None,
+        Field(
+            None,
+            description=(
+                "Size to filter by, as the user stated it (e.g. 'M', 'XL', "
+                "'EU42', '42'). Only products that have a variant of approximately "
+                "this size are returned. Omit when the user has not mentioned a size."
+            ),
+        ),
     ] = None
     color: Annotated[
-        Optional[str],
-        Field(None, description=(
-            "Color to filter by in Russian, as the user stated it "
-            "(e.g. 'желтый', 'синий', 'красный'). Only products that have a "
-            "variant of this color are returned. Omit when the user has not "
-            "mentioned a color."
-        )),
+        str | None,
+        Field(
+            None,
+            description=(
+                "Color to filter by in Russian, as the user stated it "
+                "(e.g. 'желтый', 'синий', 'красный'). Only products that have a "
+                "variant of this color are returned. Omit when the user has not "
+                "mentioned a color."
+            ),
+        ),
     ] = None
 
 
 class GetFacetsArgs(BaseModel):
     query: Annotated[
         str,
-        Field(description=(
-            "The product concept to explore, same normalisation rules as "
-            "search_products (e.g. 'брюки', 'кроссовки для бега')."
-        )),
+        Field(
+            description=(
+                "The product concept to explore, same normalisation rules as "
+                "search_products (e.g. 'брюки', 'кроссовки для бега')."
+            )
+        ),
     ]
     gender: Annotated[
-        Optional[Literal[tuple(search_mod.GENDERS)]],  # type: ignore[valid-type]
+        Literal[tuple(search_mod.GENDERS)] | None,  # type: ignore[valid-type]
         Field(None, description="Same as search_products `gender`."),
     ] = None
     categories: Annotated[
-        Optional[list[str]],
-        Field(None, description=(
-            "Category paths from find_categories to narrow the slice."
-        )),
+        list[str] | None,
+        Field(
+            None,
+            description=("Category paths from find_categories to narrow the slice."),
+        ),
     ] = None
 
 
@@ -147,7 +168,10 @@ def _tool_schema(name: str, description: str, model: type[BaseModel]) -> dict:
     schema.pop("title", None)
     for prop in schema.get("properties", {}).values():
         prop.pop("title", None)
-    return {"type": "function", "function": {"name": name, "description": description, "parameters": schema}}
+    return {
+        "type": "function",
+        "function": {"name": name, "description": description, "parameters": schema},
+    }
 
 
 TOOLS = [
@@ -249,10 +273,14 @@ def _exec_tool(name: str, args: dict) -> object:
     if name == "find_categories":
         a = FindCategoriesArgs(**args)
         cats = _find_categories(a.query)
-        return {"categories": cats} if cats else {
-            "categories": [],
-            "note": "No matching categories; search without a category filter.",
-        }
+        return (
+            {"categories": cats}
+            if cats
+            else {
+                "categories": [],
+                "note": "No matching categories; search without a category filter.",
+            }
+        )
 
     if name == "search_products":
         a = SearchProductsArgs(**args)
